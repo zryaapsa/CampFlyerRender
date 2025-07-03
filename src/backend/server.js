@@ -25,7 +25,7 @@ app.post("/payment/create", async (req, res) => {
       credit_card: {
         secure: true,
       },
-      qris: {}, // aktifkan QRIS
+      qris: {}, 
     };
     
 

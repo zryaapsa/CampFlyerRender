@@ -1,9 +1,9 @@
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../backend/auth'; 
+import { useAuth } from '../../backend/auth';
 
 function Navbar({ onLoginClick }) {
   const navigate = useNavigate();
-  const { user } = useAuth(); 
+  const { user, userData } = useAuth(); 
 
   const handleProfile = () => {
     navigate('/profile');
@@ -16,17 +16,34 @@ function Navbar({ onLoginClick }) {
       </Link>
       <ul className="flex space-x-6 items-center">
         {user ? (
-          <li>
-            <button
-              onClick={handleProfile}
-              className="hover:text-blue-600 text-xl text-white px-5"
-            >
-              Profile
-            </button>
-          </li>
+          <>
+            
+            {userData?.role !== 'partner' && (
+              <li>
+                <Link
+                  to="/history"
+                  className="text-white text-xl hover:text-blue-500"
+                >
+                  Histori
+                </Link>
+              </li>
+            )}
+
+            <li>
+              <button
+                onClick={handleProfile}
+                className="hover:text-blue-600 text-xl text-white px-5"
+              >
+                Profile
+              </button>
+            </li>
+          </>
         ) : (
           <li>
-            <button onClick={onLoginClick} className="hover:text-blue-500 text-amber-50">
+            <button
+              onClick={onLoginClick}
+              className="hover:text-blue-500 text-amber-50"
+            >
               Login
             </button>
           </li>

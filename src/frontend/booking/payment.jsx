@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../../backend/supabase";
 
 function Payment() {
@@ -7,11 +7,11 @@ function Payment() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const startedRef = useRef(false);
-  
+  const navigate = useNavigate();
 
   useEffect(() => {
-      if (!orderId || startedRef.current) return;
-      startedRef.current = true;
+    if (!orderId || startedRef.current) return;
+    startedRef.current = true;
 
     const startPayment = async () => {
       try {
@@ -35,21 +35,23 @@ function Payment() {
         const result = await response.json();
         if (!result.token) throw new Error("Gagal ambil Snap token");
 
-      
         window.snap.pay(result.token, {
-          onSuccess: function(result) {
-            alert("Pembayaran sukses!");
-            console.log(result);
-          },
-          onPending: function(result) {
-            console.log("Menunggu pembayaran:", result);
-          },
-          onError: function(error) {
-            console.error("Terjadi error:", error);
-          },
-          onClose: function() {
-            console.warn("Pembayaran ditutup");
-          }
+          
+         onSuccess: async function (result) {
+  console.log("Pembayaran berhasil:", result);
+  const { error } = await supabase
+    .from("orders")
+    .update({ status: "success" })
+    .eq("id", data.id); 
+  if (error) {
+    console.error("Gagal update status:", error.message);
+  }
+  sessionStorage.setItem("recent_order_id", data.id);
+  setTimeout(() => {
+    navigate("/history");
+  }, 1000);
+}
+
         });
 
       } catch (err) {
@@ -60,9 +62,10 @@ function Payment() {
     };
 
     startPayment();
-  }, [orderId]);
+  }, [orderId, navigate]);
 
-  if (loading) return <p className="text-white text-center mt-10">Loading...</p>;
+  if (loading)
+    return <p className="text-white text-center mt-10">Loading...</p>;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6 flex justify-center items-center">

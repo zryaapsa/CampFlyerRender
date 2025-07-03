@@ -8,6 +8,7 @@ import DetailCampaign from "./frontend/booking/detail";
 import Checkout from "./frontend/booking/checkout";
 import EditCampaign from "./partner/edit_campaign";
 import Payment from "./frontend/booking/payment";
+import History from "./frontend/booking/histori";
 
 
 
@@ -17,6 +18,10 @@ function App() {
   
 
   return (
+    
+  
+
+    
     
     <Routes>
       <Route path="/" element={<Home/>} />
@@ -36,16 +41,20 @@ function App() {
       <Route path="/detailcampaign/:id" element={<DetailCampaign />} />
       <Route path="/editcampaign/:id" element={<EditCampaign />} />
       <Route path="/payment/:orderId" element={<Payment />} />
+      <Route path="/history" element={<History />} />
     
 
 
 
 
-
+    
     </Routes>
     
-   
+    
   );
+
+  
 }
+
 
 export default App

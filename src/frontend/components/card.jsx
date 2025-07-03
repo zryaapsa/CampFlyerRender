@@ -1,4 +1,4 @@
-// versi Supabase
+
 import { registerUser } from '../../backend/supabase';
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -92,20 +92,26 @@ function LoginCard({ onClose = () => {} }) {
         return;
       }
 
-      const userData = userDataRes;
-      console.log("USER DATA DARI DB:", userData);
-      console.log("ROLE:", userData.role);
+     const userData = userDataRes;
+      const role = String(userData.role).toLowerCase().trim();
+
+      if (role !== 'user' && role !== 'partner') {
+        await supabase.auth.signOut();
+        toast.error("Akses ditolak. Hanya akun 'user' atau 'partner' yang diperbolehkan.");
+        return;
+      }
 
       toast.success("Login berhasil!");
 
       setTimeout(() => {
         onClose();
-        if (String(userData.role).toLowerCase().trim() === "partner") {
+        if (role === "partner") {
           navigate('/homepartner');
         } else {
           navigate('/home');
         }
       }, 1000);
+
 
       setLoginForm({ email: '', password: '' });
 

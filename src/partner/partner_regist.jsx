@@ -55,7 +55,7 @@ function PartnerRegister() {
           user_id: user.id,
           name: form.name,
           email: form.email,
-          role: 'partner',
+          role: 'req-partner',
         }]);
 
       if (insertError) throw insertError;

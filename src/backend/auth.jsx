@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
       const authUser = authData?.user || null;
       setUser(authUser);
 
-      // Jika user login, ambil data tambahan dari tabel 'users'
+    
       if (authUser) {
         const { data: profile, error } = await supabase
           .from('users')
@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }) => {
       const newUser = session?.user || null;
       setUser(newUser);
 
-      // Ambil ulang data dari tabel users saat login/logout
+    
       if (newUser) {
         supabase
           .from('users')
