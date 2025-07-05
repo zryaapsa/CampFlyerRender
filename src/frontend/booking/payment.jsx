@@ -6,6 +6,7 @@ function Payment() {
   const { orderId } = useParams();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showSuccess, setShowSuccess] = useState(false);
   const startedRef = useRef(false);
   const navigate = useNavigate();
 
@@ -36,24 +37,34 @@ function Payment() {
         if (!result.token) throw new Error("Gagal ambil Snap token");
 
         window.snap.pay(result.token, {
-          
-         onSuccess: async function (result) {
-  console.log("Pembayaran berhasil:", result);
-  const { error } = await supabase
-    .from("orders")
-    .update({ status: "success" })
-    .eq("id", data.id); 
-  if (error) {
-    console.error("Gagal update status:", error.message);
-  }
-  sessionStorage.setItem("recent_order_id", data.id);
-  setTimeout(() => {
-    navigate("/history");
-  }, 1000);
-}
+          onSuccess: async function (result) {
+            console.log("✅ Pembayaran berhasil:", result);
 
+            // Update status order
+            const { error: statusError } = await supabase
+              .from("orders")
+              .update({ status: "success" })
+              .eq("id", data.id);
+            if (statusError) console.error("❌ Gagal update status:", statusError.message);
+
+            // Kurangi kursi dari fungsi RPC
+            const { error: updateCampaignError } = await supabase.rpc("kurangi_kursi", {
+              campaign_id_input: data.campaign_id,
+            });
+            if (updateCampaignError) {
+              console.error("❌ Gagal update kursi:", updateCampaignError.message);
+            } else {
+              console.log("✅ Kursi dikurangi.");
+            }
+
+            
+            sessionStorage.setItem("recent_order_id", data.id);
+
+            
+            setShowSuccess(true);
+          },
+          onClose: () => console.warn("🛑 Pembayaran ditutup"),
         });
-
       } catch (err) {
         alert("❌ Gagal: " + err.message);
       } finally {
@@ -68,13 +79,30 @@ function Payment() {
     return <p className="text-white text-center mt-10">Loading...</p>;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6 flex justify-center items-center">
-      <div className="bg-white text-gray-900 p-6 rounded-xl w-full max-w-md text-center">
-        <h2 className="text-2xl font-bold mb-2">Pembayaran</h2>
-        {order && <p className="mb-2">Order ID: {order.id}</p>}
-        <p className="text-sm text-gray-500">QR akan muncul di popup</p>
+    <>
+      <div className="min-h-screen bg-gray-900 text-white p-6 flex justify-center items-center">
+        <div className="bg-white text-gray-900 p-6 rounded-xl w-full max-w-md text-center">
+          <h2 className="text-2xl font-bold mb-2">Pembayaran</h2>
+          {order && <p className="mb-2">Order ID: {order.id}</p>}
+          <p className="text-sm text-gray-500">Bentar ya lagi hubungin Bang Midtrans</p>
+        </div>
       </div>
-    </div>
+
+      {showSuccess && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white text-gray-900 p-6 rounded-xl text-center w-full max-w-sm shadow-lg">
+            <h3 className="text-xl font-bold mb-4">✅ Pembayaran Berhasil!</h3>
+            <p className="text-gray-600 mb-4">Terima kasih. Tiket kamu sudah dikonfirmasi. Kamu bisa lihat detail tiket kamu di histori</p>
+            <button
+              onClick={() => navigate("/history")}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+            >
+              Histori Pembelian
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

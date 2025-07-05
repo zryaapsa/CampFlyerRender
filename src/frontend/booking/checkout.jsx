@@ -13,7 +13,7 @@ function Checkout() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
 
-  // Ambil user & campaign data
+  
   useEffect(() => {
     const fetchData = async () => {
       try {
