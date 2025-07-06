@@ -33,16 +33,29 @@ function Home() {
         checkUser();
         fetchCampaigns();
 
-        // 🔄 Event listener untuk refresh data saat user kembali ke tab ini
+        // Listen to auth state changes
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (event === "SIGNED_IN") {
+                setUser(session.user);
+                fetchCampaigns();
+            } else if (event === "SIGNED_OUT") {
+                setUser(null);
+                fetchCampaigns();
+            }
+        });
+
+        // 🔄 Refresh data saat user kembali ke tab ini
         const handleVisibilityChange = () => {
             if (document.visibilityState === "visible") {
-                console.log("🔁 Halaman aktif kembali, refresh kursi...");
                 fetchCampaigns();
             }
         };
 
         document.addEventListener("visibilitychange", handleVisibilityChange);
         return () => {
+            subscription.unsubscribe();
             document.removeEventListener("visibilitychange", handleVisibilityChange);
         };
     }, []);
