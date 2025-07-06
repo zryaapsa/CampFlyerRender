@@ -10,51 +10,25 @@ import EditCampaign from "./partner/edit_campaign";
 import Payment from "./frontend/booking/payment";
 import History from "./frontend/booking/histori";
 
-
-
-
-
 function App() {
-  
+    return (
+        <Routes>
+            <Route path="/" element={<Home />} />
 
-  return (
-    
-  
+            <Route path="/home" element={<Home />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/homepartner" element={<HomePartner />} />
+            <Route path="/registpartner" element={<PartnerRegister />} />
+            <Route path="/campaignform" element={<CampaignForm />} />
+            <Route path="/campaign/:id" element={<DetailCampaign />} />
 
-    
-    
-    <Routes>
-      <Route path="/" element={<Home/>} />
-
-
-
-      <Route path="/home" element={<Home />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/homepartner" element={<HomePartner />} />
-      <Route path="/registpartner" element={<PartnerRegister />} />
-      <Route path="/campaignform" element={<CampaignForm/>} />
-      <Route path="/campaign/:id" element={<DetailCampaign/>} />
-
-
-      
-      <Route path="/checkout/:campaignId" element={<Checkout />} />
-      <Route path="/detailcampaign/:id" element={<DetailCampaign />} />
-      <Route path="/editcampaign/:id" element={<EditCampaign />} />
-      <Route path="/payment/:orderId" element={<Payment />} />
-      <Route path="/history" element={<History />} />
-    
-
-
-
-
-    
-    </Routes>
-    
-    
-  );
-
-  
+            <Route path="/checkout/:campaignId" element={<Checkout />} />
+            <Route path="/detailcampaign/:id" element={<DetailCampaign />} />
+            <Route path="/editcampaign/:id" element={<EditCampaign />} />
+            <Route path="/payment/:orderId" element={<Payment />} />
+            <Route path="/history" element={<History />} />
+        </Routes>
+    );
 }
 
-
-export default App
+export default App;
