@@ -1,24 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <title>CampFlyer</title>
-        <meta
-            http-equiv="Content-Security-Policy"
-            content="
+  <head>
+    <meta charset="UTF-8" />
+    <title>CampFlyer</title>
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
     default-src 'self';
     style-src 'self' 'unsafe-inline';
     script-src 'self' 'unsafe-inline' https://app.sandbox.midtrans.com;
     img-src 'self' https://*.supabase.co data: blob:;
     connect-src 'self' https://*.supabase.co http://localhost:5000 ws://localhost:*;
     frame-src https://app.sandbox.midtrans.com;"
-        />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    </head>
-    <body>
-        <div id="root"></div>
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head>
 
-        <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="Mid-client-jDVQPqY6Kf3YOTh4"></script>
-        <script type="module" src="/src/main.jsx"></script>
-    </body>
+  {/* p : Perubahan ditambahkan di sini untuk memberi warna latar belakang
+  default */}
+  <body style="background-color: #111827">
+    <div id="root"></div>
+
+    <script
+      src="https://app.sandbox.midtrans.com/snap/snap.js"
+      data-client-key="Mid-client-jDVQPqY6Kf3YOTh4"
+    ></script>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
