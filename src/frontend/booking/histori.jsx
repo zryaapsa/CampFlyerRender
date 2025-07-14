@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../../backend/supabase";
 import Navbar from "../components/navbar";
 import { QRCodeCanvas } from "qrcode.react";
@@ -11,43 +12,62 @@ function History() {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const recentRef = useRef(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchInitialData = async () => {
             setLoading(true);
-            const { data: sessionData } = await supabase.auth.getSession();
-            const currentUser = sessionData?.session?.user;
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
             setUser(currentUser);
 
-            if (!currentUser) {
-                setLoading(false);
-                return;
+            if (currentUser) {
+                const { data, error } = await supabase
+                    .from("orders")
+                    .select(`id, status, metode, amount, created_at, campaigns (id, campaign_name, tanggal, jam, foto_url)`)
+                    .eq("user_id", currentUser.id)
+                    .order("created_at", { ascending: false });
+
+                if (!error && data) setOrders(data);
+                
+                const id = sessionStorage.getItem("recent_order_id");
+                if (id) {
+                    setRecentOrderId(id);
+                    sessionStorage.removeItem("recent_order_id");
+                }
             }
-
-            const { data, error } = await supabase
-                .from("orders")
-                .select(
-                    `
-                    id, status, metode, amount, created_at,
-                    campaigns (id, campaign_name, tanggal, jam, foto_url)
-                    `
-                )
-                .eq("user_id", currentUser.id)
-                .order("created_at", { ascending: false });
-
-            if (!error && data) setOrders(data);
-
-            const id = sessionStorage.getItem("recent_order_id");
-            if (id) {
-                setRecentOrderId(id);
-                sessionStorage.removeItem("recent_order_id");
-            }
-
             setLoading(false);
         };
 
-        fetchData();
+        fetchInitialData();
     }, []);
+
+    useEffect(() => {
+        if (!user) return;
+
+        const channel = supabase.channel(`public:orders:user_id=eq.${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'orders',
+                    filter: `user_id=eq.${user.id}`
+                },
+                (payload) => {
+                    console.log('Perubahan Realtime Diterima:', payload.new);
+                    setOrders(currentOrders =>
+                        currentOrders.map(order =>
+                            order.id === payload.new.id ? { ...order, ...payload.new } : order
+                        )
+                    );
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user]);
 
     useEffect(() => {
         if (recentOrderId && recentRef.current) {
@@ -57,21 +77,24 @@ function History() {
 
     const formatDate = (dateString) => {
         const date = new Date(dateString);
-        return date.toLocaleDateString("id-ID", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-        });
+        return date.toLocaleDateString("id-ID", { year: "numeric", month: "short", day: "numeric" });
     };
 
     const getStatusColor = (status) => {
         switch (status) {
-            case "success":
-                return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
-            case "pending":
-                return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
-            default:
-                return "bg-red-500/20 text-red-400 border-red-500/30";
+            case "success": return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+            case "pending": return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
+            default: return "bg-red-500/20 text-red-400 border-red-500/30";
+        }
+    };
+    
+    const handleCardClick = (order) => {
+        if (order.status === 'success') {
+            setSelectedOrder(order);
+        } else if (order.status === 'pending') {
+            navigate(`/payment/${order.id}`);
+        } else {
+            alert("Pembayaran untuk pesanan ini gagal atau telah dibatalkan.");
         }
     };
 
@@ -83,6 +106,7 @@ function History() {
                     <div className="absolute top-20 left-10 w-72 h-72 bg-purple-600 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse"></div>
                     <div className="absolute top-40 right-10 w-72 h-72 bg-blue-600 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse" style={{ animationDelay: "2s" }}></div>
                 </div>
+
                 <div className="relative z-10 p-4 sm:p-6 lg:p-8">
                     <div className="text-center mb-12 pt-8">
                         <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
@@ -100,9 +124,10 @@ function History() {
                                     const campaign = order.campaigns;
                                     const isRecent = order.id === recentOrderId;
                                     const previewURL = campaign?.foto_url || "https://via.placeholder.com/400x300/374151/9CA3AF?text=No+Image";
+                                    const isClickable = order.status === 'success' || order.status === 'pending';
 
                                     return (
-                                        <div key={order.id} ref={isRecent ? recentRef : null} onClick={() => setSelectedOrder(order)} className={`group cursor-pointer transform transition-all duration-300 hover:scale-105 hover:-translate-y-2 ${isRecent ? "ring-2 ring-purple-500 shadow-lg shadow-purple-500/20" : ""}`} style={{ animationDelay: `${index * 100}ms` }}>
+                                        <div key={order.id} ref={isRecent ? recentRef : null} onClick={() => handleCardClick(order)} className={`group transform transition-all duration-300 ${isClickable ? 'cursor-pointer hover:scale-105 hover:-translate-y-2' : 'cursor-default'} ${isRecent ? "ring-2 ring-purple-500 shadow-lg shadow-purple-500/20" : ""}`} style={{ animationDelay: `${index * 100}ms` }}>
                                             <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl overflow-hidden shadow-xl border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300 h-full flex flex-col">
                                                 <div className="relative overflow-hidden h-48">
                                                     <img src={previewURL} alt={campaign?.campaign_name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
@@ -142,14 +167,20 @@ function History() {
                                                         <span className="text-gray-400 text-sm">Total Pembayaran</span>
                                                         <span className="text-2xl font-bold text-purple-400">Rp {Number(order.amount).toLocaleString("id-ID")}</span>
                                                     </div>
-                                                    <div className="flex justify-center mb-4">
-                                                        <div className="bg-white p-2 rounded-lg">
-                                                            <QRCodeCanvas value={order.id} size={80} />
-                                                        </div>
+                                                    <div className="flex justify-center items-center h-24 mb-4">
+                                                        {order.status === 'success' ? (
+                                                            <div className="bg-white p-2 rounded-lg">
+                                                                <QRCodeCanvas value={order.id} size={80} />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-center text-gray-500 text-xs p-2 border-2 border-dashed border-gray-700 rounded-lg w-full h-full flex items-center justify-center">
+                                                                <span>QR Code tersedia setelah<br/>pembayaran berhasil.</span>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <div className="mt-auto pt-4 border-t border-gray-700/50">
                                                         <span className="inline-flex items-center text-purple-400 text-sm font-medium group-hover:text-purple-300 transition-colors duration-300">
-                                                            Lihat Tiket
+                                                            {order.status === 'success' ? 'Lihat Tiket' : order.status === 'pending' ? 'Selesaikan Pembayaran' : 'Pembayaran Gagal'}
                                                             <svg className="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                                                         </span>
                                                     </div>
@@ -173,7 +204,6 @@ function History() {
                     </div>
                 </div>
             </div>
-
             {selectedOrder && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-2">
                     <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl p-4 w-full max-w-xs text-center relative transform transition-all duration-300 scale-100">

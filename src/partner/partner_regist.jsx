@@ -3,13 +3,15 @@ import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { supabase } from '../backend/supabase'; 
+// p: Kita akan memanggil fungsi registerPartner yang sudah kita siapkan
+import { registerPartner } from '../backend/supabase'; 
 
 function PartnerRegister() {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-  const [error, setError] = useState('');
+  // p: State 'error' tidak lagi digunakan, bisa dihapus.
+  // const [error, setError] = useState('');
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -17,56 +19,33 @@ function PartnerRegister() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
 
+    // p: Validasi form tetap sama dan sudah benar.
     if (!form.name || !form.email || !form.password) {
       toast.error("Semua field harus diisi!");
       return;
     }
-
     if (!form.email.includes("@") || !form.email.includes(".")) {
       toast.error("Email tidak valid!");
       return;
     }
-
     if (form.password.length < 8) {
       toast.error("Password minimal 8 karakter!");
       return;
     }
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: form.email.trim(),
-        password: form.password.trim()
-      });
+      // p: Hapus semua logika signUp dan insert manual. Cukup panggil satu fungsi ini.
+      // Fungsi registerPartner akan mengirim nama dan role 'req-partner' ke trigger Supabase.
+      await registerPartner(form.name, form.email.trim(), form.password);
 
-      if (error) throw error;
-
-      const user = data.user;
-      if (!user) {
-        toast.error("Registrasi gagal. Coba lagi.");
-        return;
-      }
-
-
-      const { error: insertError } = await supabase
-        .from('users')
-        .insert([{
-          user_id: user.id,
-          name: form.name,
-          email: form.email,
-          role: 'req-partner',
-        }]);
-
-      if (insertError) throw insertError;
-
-      toast.success("Pendaftaran berhasil!");
+      toast.success("Pendaftaran berhasil! Akun Anda akan diverifikasi oleh Admin.");
 
       setForm({ name: '', email: '', password: '' });
 
       setTimeout(() => {
         navigate('/');
-      }, 1000);
+      }, 1500);
 
     } catch (err) {
       console.error(err);
