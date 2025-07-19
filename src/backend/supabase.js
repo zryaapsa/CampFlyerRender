@@ -2,10 +2,6 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-// const supabaseUrl = "https://bjrdyjjsmfzhpcggdfwc.supabase.co";
-// const supabaseAnonKey =
-//   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcmR5ampzbWZ6aHBjZ2dkZndjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjQxNzg4NSwiZXhwIjoyMDY3OTkzODg1fQ.QcjcHpWQVGkoe8NL8lynnD2tQns62oDvL0K7uGTkNpI";
-
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -35,8 +31,7 @@ export async function registerUser(name, email, password) {
 
 //Partner
 export async function registerPartner(name, email, password) {
-  // Sama seperti registerUser, hanya perlu signUp.
-  // Pastikan role yang dikirim adalah 'req-partner' sesuai desain approval kita.
+
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
