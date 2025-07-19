@@ -3,15 +3,13 @@ import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-// p: Kita akan memanggil fungsi registerPartner yang sudah kita siapkan
 import { registerPartner } from '../backend/supabase'; 
 
 function PartnerRegister() {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-  // p: State 'error' tidak lagi digunakan, bisa dihapus.
-  // const [error, setError] = useState('');
+  
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -35,8 +33,7 @@ function PartnerRegister() {
     }
 
     try {
-      // p: Hapus semua logika signUp dan insert manual. Cukup panggil satu fungsi ini.
-      // Fungsi registerPartner akan mengirim nama dan role 'req-partner' ke trigger Supabase.
+      
       await registerPartner(form.name, form.email.trim(), form.password);
 
       toast.success("Pendaftaran berhasil! Akun Anda akan diverifikasi oleh Admin.");

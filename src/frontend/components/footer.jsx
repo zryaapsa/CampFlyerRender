@@ -6,7 +6,8 @@ function Footer() {
     const { user, userData } = useAuth();
 
     const handlePartner = () => {
-        navigate("/registpartner");
+        // p: Arahkan ke halaman permintaan, bukan registrasi
+        navigate("/request-partner"); 
     };
 
     if (userData?.role === "partner") {
@@ -22,7 +23,8 @@ function Footer() {
                         <p className="text-sm text-gray-400">Platform promosi pihak ketiga terpercaya. Kami bantu event atau produkmu dikenal lebih luas.</p>
                     </div>
 
-                    {user && (
+                    {/* p: Tampilkan hanya jika user login dan rolenya 'user' */}
+                    {user && userData?.role === 'user' && (
                         <div className="px-2">
                             <h2 className="text-lg font-semibold">Bisnis Partner</h2>
                             <p className="text-sm text-gray-400 mb-3">Jadi bagian dari kami</p>

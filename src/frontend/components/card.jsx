@@ -9,11 +9,10 @@ import { useAuth } from "../../backend/auth";
 import { supabase } from "../../backend/supabase";
 
 function LoginCard({ onClose = () => {} }) {
-    const [isLogin, setIsLogin] = useState(false);
+    const [isLogin, setIsLogin] = useState(true); // Default ke tampilan Login
     const [showPassword, setShowPassword] = useState(false);
     const [form, setForm] = useState({ name: "", email: "", password: "" });
     const [loginForm, setLoginForm] = useState({ email: "", password: "" });
-    const [error, setError] = useState("");
     const navigate = useNavigate();
     const { setUser } = useAuth();
 
@@ -27,30 +26,21 @@ function LoginCard({ onClose = () => {} }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError("");
         if (!form.email.includes("@") || !form.email.includes(".")) {
             toast.error("Email tidak valid");
             return;
         }
-
         try {
             await registerUser(form.name, form.email.trim(), form.password);
-            toast.success("Pendaftaran berhasil!");
-            setForm({ name: "", email: "", password: "" });
-            setTimeout(() => {
-                navigate("/home");
-                onClose();
-            }, 1500);
+            toast.success("Pendaftaran berhasil! Silakan login.");
+            setIsLogin(true); 
         } catch (err) {
-            console.error(err);
             toast.error(err.message);
         }
     };
 
     const handleLoginSubmit = async (e) => {
         e.preventDefault();
-        setError("");
-
         try {
             const { data: sessionData, error: loginError } = await supabase.auth.signInWithPassword({
                 email: loginForm.email.trim(),
@@ -60,43 +50,33 @@ function LoginCard({ onClose = () => {} }) {
             if (loginError) throw loginError;
 
             const user = sessionData.user;
-            setUser(user);
+            const { data: userData, error: queryError } = await supabase.from("users").select("role").eq("user_id", user.id).single();
 
-            const { data: userDataRes, error: queryError } = await supabase.from("users").select("*").eq("user_id", user.id).single();
-
-            if (queryError) {
-                toast.error("Data user tidak ditemukan.");
-                return;
-            }
-
-            const userData = userDataRes;
-            const role = String(userData.role).toLowerCase().trim();
+            if (queryError) throw new Error("Gagal mengambil data peran pengguna.");
+            
+            const role = userData.role;
 
             if (role !== "user" && role !== "partner") {
                 await supabase.auth.signOut();
-                toast.error("Akses ditolak. Hanya akun 'user' atau 'partner' yang diperbolehkan.");
+                toast.error("Akses ditolak. Akun Anda mungkin sedang menunggu persetujuan admin.");
                 return;
             }
 
             toast.success("Login berhasil!");
+            setUser(user); 
 
             setTimeout(() => {
                 onClose();
+                
                 if (role === "partner") {
-                    navigate("/homepartner");
+                    navigate("/homepartner"); 
                 } else {
-                    navigate("/home");
+                    navigate("/home"); 
                 }
             }, 1000);
 
-            setLoginForm({ email: "", password: "" });
         } catch (err) {
-            console.error(err);
-            if (err.code === 429) {
-                toast.error("Terlalu banyak percobaan login. Coba lagi sebentar.");
-            } else {
-                toast.error(err.message || "Terjadi kesalahan saat login.");
-            }
+            toast.error(err.message || "Terjadi kesalahan saat login.");
         }
     };
 
@@ -108,9 +88,30 @@ function LoginCard({ onClose = () => {} }) {
                     ×
                 </button>
 
-                <motion.div animate={{ rotateY: isLogin ? 180 : 0 }} transition={{ duration: 0.8 }} className="relative w-full h-full" style={{ transformStyle: "preserve-3d" }}>
-                    {/* regist */}
+                <motion.div animate={{ rotateY: isLogin ? 0 : 180 }} transition={{ duration: 0.8 }} className="relative w-full h-full" style={{ transformStyle: "preserve-3d" }}>
+                    {/* Login Form */}
                     <div className="absolute w-full h-full bg-white shadow-xl rounded-xl p-8" style={{ backfaceVisibility: "hidden", transform: "rotateY(0deg)" }}>
+                        <h2 className="text-2xl font-bold mb-4 text-center">Login</h2>
+                        <input type="email" name="email" value={loginForm.email} onChange={handleLoginChange} placeholder="Email" className="w-full p-2 border rounded mb-3" />
+                        <div className="relative">
+                            <input type={showPassword ? "text" : "password"} name="password" value={loginForm.password} onChange={handleLoginChange} placeholder="Password" className="w-full p-2 border rounded pr-10" />
+                            <div className="absolute right-3 top-2.5 text-gray-500 cursor-pointer" onClick={() => setShowPassword(!showPassword)}>
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </div>
+                        </div>
+                        <button onClick={handleLoginSubmit} className="w-full mt-4 bg-black hover:bg-blue-950 text-white py-2 rounded">
+                            Masuk
+                        </button>
+                        <p className="text-sm text-center mt-4">
+                            Belum punya akun?{" "}
+                            <span className="text-blue-500 cursor-pointer" onClick={() => setIsLogin(false)}>
+                                Daftar di sini
+                            </span>
+                        </p>
+                    </div>
+
+                    {/* Register Form */}
+                    <div className="absolute w-full h-full bg-white shadow-xl rounded-xl p-8" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
                         <h2 className="text-2xl font-bold mb-4 text-center">Register</h2>
                         <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Name" className="w-full p-2 border rounded mb-3" />
                         <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="Email" className="w-full p-2 border rounded mb-3" />
@@ -127,27 +128,6 @@ function LoginCard({ onClose = () => {} }) {
                             Sudah punya akun?{" "}
                             <span className="text-blue-500 cursor-pointer" onClick={() => setIsLogin(true)}>
                                 Login di sini
-                            </span>
-                        </p>
-                    </div>
-
-                    {/* login */}
-                    <div className="absolute w-full h-full bg-white shadow-xl rounded-xl p-8" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                        <h2 className="text-2xl font-bold mb-4 text-center">Login</h2>
-                        <input type="email" name="email" value={loginForm.email} onChange={handleLoginChange} placeholder="Email" className="w-full p-2 border rounded mb-3" />
-                        <div className="relative">
-                            <input type={showPassword ? "text" : "password"} name="password" value={loginForm.password} onChange={handleLoginChange} placeholder="Password" className="w-full p-2 border rounded pr-10" />
-                            <div className="absolute right-3 top-2.5 text-gray-500 cursor-pointer" onClick={() => setShowPassword(!showPassword)}>
-                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                            </div>
-                        </div>
-                        <button onClick={handleLoginSubmit} className="w-full mt-4 bg-black hover:bg-blue-950 text-white py-2 rounded">
-                            Masuk
-                        </button>
-                        <p className="text-sm text-center mt-4">
-                            Belum punya akun?{" "}
-                            <span className="text-blue-500 cursor-pointer" onClick={() => setIsLogin(false)}>
-                                Daftar di sini
                             </span>
                         </p>
                     </div>

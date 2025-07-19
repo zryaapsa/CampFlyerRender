@@ -3,62 +3,54 @@ import { useEffect, useState } from "react";
 import Navbar from "./components/navbar";
 import { supabase } from "../backend/supabase";
 import LoginCard from "./components/card";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; 
+import { useAuth } from "../backend/auth"; 
 
 function Home() {
     const [campaigns, setCampaigns] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState(null);
     const [showCard, setShowCard] = useState(false);
+    
+    
+    const { user, userData, loading: authLoading } = useAuth();
+    const navigate = useNavigate();
 
-    const fetchCampaigns = async () => {
-        setLoading(true);
-        try {
-            const { data, error } = await supabase.from("campaigns").select("*");
-            if (error) throw error;
-            setCampaigns(data);
-        } catch (err) {
-            console.error("Gagal mengambil campaign:", err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    
     useEffect(() => {
-        const checkUser = async () => {
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
-            setUser(user);
-        };
+        // Jangan lakukan apa-apa jika data otentikasi masih loading
+        if (authLoading) return;
 
-        checkUser();
-        fetchCampaigns();
+        // Jika user sudah login dan rolenya adalah 'partner', paksa arahkan ke dashboard partner
+        if (user && userData?.role === 'partner') {
+            navigate('/homepartner', { replace: true }); // replace: true agar tidak bisa kembali ke /home
+        }
+    }, [user, userData, authLoading, navigate]);
 
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === "SIGNED_IN") {
-                setUser(session.user);
-                fetchCampaigns();
-            } else if (event === "SIGNED_OUT") {
-                setUser(null);
-                fetchCampaigns();
-            }
-        });
 
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === "visible") {
-                fetchCampaigns();
-            }
-        };
+    // useEffect yang ini tetap bertugas mengambil data campaign
+    useEffect(() => {
+        // Hanya fetch campaign jika user bukan partner, untuk efisiensi
+        if (userData?.role !== 'partner') {
+            const fetchCampaigns = async () => {
+                setLoading(true);
+                try {
+                    const { data, error } = await supabase.from("campaigns").select("*");
+                    if (error) throw error;
+                    setCampaigns(data);
+                } catch (err) {
+                    console.error("Gagal mengambil campaign:", err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchCampaigns();
+        }
+    }, [userData]); // Dijalankan ketika userData berubah
 
-        document.addEventListener("visibilitychange", handleVisibilityChange);
-        return () => {
-            subscription.unsubscribe();
-            document.removeEventListener("visibilitychange", handleVisibilityChange);
-        };
-    }, []);
+   
+    if (authLoading || (user && userData?.role === 'partner')) {
+        return <div className="min-h-screen bg-gray-900"></div>; // Tampilkan layar kosong sementara
+    }
 
     return (
         <>
@@ -110,7 +102,6 @@ function Home() {
                             </div>
                         </div>
                     )}
-
                     {user && (
                         <div className="text-center mb-12 pt-8">
                             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
@@ -123,12 +114,10 @@ function Home() {
                             <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">Lanjutkan perjalanan pembelajaran Anda dengan campaign terbaru</p>
                         </div>
                     )}
-
                     <div className="text-center mb-12">
                         <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">{user ? "Campaign Tersedia" : "Campaign Populer"}</h2>
                         <p className="text-gray-400 max-w-2xl mx-auto">{user ? "Pilih campaign yang sesuai dengan minat dan jadwal Anda" : "Daftar sekarang untuk mengakses semua campaign eksklusif"}</p>
                     </div>
-
                     <div className="max-w-7xl mx-auto">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {loading ? (
@@ -142,21 +131,12 @@ function Home() {
                                                 <Link
                                                     to={user ? `/campaign/${item.id}` : "#"}
                                                     className="flex flex-col h-full"
-                                                    onClick={
-                                                        !user
-                                                            ? (e) => {
-                                                                    e.preventDefault();
-                                                                    setShowCard(true);
-                                                                }
-                                                            : undefined
-                                                    }
+                                                    onClick={!user ? (e) => { e.preventDefault(); setShowCard(true); } : undefined}
                                                 >
                                                     <div className="relative overflow-hidden h-48">
                                                         <img src={previewURL} alt={item.campaign_name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
                                                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                                        <div className="absolute top-4 right-4">
-                                                            <span className="bg-emerald-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg">{item.kursi} Kursi</span>
-                                                        </div>
+                                                        <div className="absolute top-4 right-4"><span className="bg-emerald-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg">{item.kursi} Kursi</span></div>
                                                         {!user && (
                                                             <div className="absolute top-4 left-4">
                                                                 <div className="bg-gray-900/80 backdrop-blur-sm rounded-full p-2">
@@ -166,18 +146,10 @@ function Home() {
                                                         )}
                                                     </div>
                                                     <div className="p-6 flex-1 flex flex-col">
-                                                        <div className="h-16 flex items-start mb-4">
-                                                            <h3 className="text-xl font-bold text-white leading-tight group-hover:text-purple-300 transition-colors duration-300 line-clamp-2">{item.campaign_name}</h3>
-                                                        </div>
+                                                        <div className="h-16 flex items-start mb-4"><h3 className="text-xl font-bold text-white leading-tight group-hover:text-purple-300 transition-colors duration-300 line-clamp-2">{item.campaign_name}</h3></div>
                                                         <div className="grid grid-cols-2 gap-4 mb-6">
-                                                            <div className="flex items-center text-gray-400">
-                                                                <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                                                <span className="text-sm">{item.tanggal}</span>
-                                                            </div>
-                                                            <div className="flex items-center text-gray-400">
-                                                                <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                                <span className="text-sm">{item.jam}</span>
-                                                            </div>
+                                                            <div className="flex items-center text-gray-400"><svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg><span className="text-sm">{item.tanggal}</span></div>
+                                                            <div className="flex items-center text-gray-400"><svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><span className="text-sm">{item.jam}</span></div>
                                                         </div>
                                                         <div className="mt-auto pt-4 border-t border-gray-700/50">
                                                             <span className="inline-flex items-center text-purple-400 text-sm font-medium group-hover:text-purple-300 transition-colors duration-300">
@@ -194,9 +166,7 @@ function Home() {
                             ) : (
                                 <div className="text-center py-16 col-span-full">
                                     <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 max-w-md mx-auto border border-gray-700/50">
-                                        <div className="w-20 h-20 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-                                        </div>
+                                        <div className="w-20 h-20 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-4"><svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg></div>
                                         <h3 className="text-xl font-semibold text-white mb-2">Belum Ada Campaign</h3>
                                         <p className="text-gray-400">Campaign menarik akan segera hadir</p>
                                     </div>
@@ -204,7 +174,6 @@ function Home() {
                             )}
                         </div>
                     </div>
-
                     {!user && campaigns.length > 0 && (
                         <div className="mt-16 text-center">
                             <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 max-w-2xl mx-auto border border-gray-700/50">

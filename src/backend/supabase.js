@@ -2,9 +2,13 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = "https://bjrdyjjsmfzhpcggdfwc.supabase.co";
-const supabaseAnonKey =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcmR5ampzbWZ6aHBjZ2dkZndjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjQxNzg4NSwiZXhwIjoyMDY3OTkzODg1fQ.QcjcHpWQVGkoe8NL8lynnD2tQns62oDvL0K7uGTkNpI";
+// const supabaseUrl = "https://bjrdyjjsmfzhpcggdfwc.supabase.co";
+// const supabaseAnonKey =
+//   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcmR5ampzbWZ6aHBjZ2dkZndjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjQxNzg4NSwiZXhwIjoyMDY3OTkzODg1fQ.QcjcHpWQVGkoe8NL8lynnD2tQns62oDvL0K7uGTkNpI";
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
 const BUCKET_NAME = "campaigns";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -15,26 +19,16 @@ export async function registerUser(name, email, password) {
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
-    options: { 
-      data: { 
-        name: name, 
-        role: "user" // Pastikan 'role' dikirim dalam options agar trigger bisa membacanya
-      } 
+    options: {
+      data: {
+        name: name,
+        role: "user", // Pastikan 'role' dikirim dalam options agar trigger bisa membacanya
+      },
     },
   });
 
   if (signUpError) throw signUpError;
 
-  // --- BAGIAN INI DIHAPUS KARENA SUDAH DIKERJAKAN OTOMATIS OLEH TRIGGER ---
-  // const user = signUpData.user;
-  // const { error: insertError } = await supabase.from("users").insert({
-  //   user_id: user.id,
-  //   name,
-  //   email,
-  //   role: "user",
-  // });
-  // if (insertError) throw insertError;
-  // --------------------------------------------------------------------
 
   return signUpData.user;
 }
@@ -46,11 +40,11 @@ export async function registerPartner(name, email, password) {
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
-    options: { 
-      data: { 
-        name: name, 
-        role: "req-partner" // Mengirim role untuk approval admin
-      } 
+    options: {
+      data: {
+        name: name,
+        role: "req-partner", // Mengirim role untuk approval admin
+      },
     },
   });
   if (signUpError) throw signUpError;
@@ -97,7 +91,7 @@ export const createCampaign = async (form) => {
         foto_url: foto_url,
         owner_id: form.owner_id,
         // Jangan lupa tambahkan category_id jika form sudah diupdate
-        // category_id: form.category_id 
+        // category_id: form.category_id
       },
     ]);
 

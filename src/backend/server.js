@@ -3,21 +3,30 @@ import cors from "cors";
 import midtransClient from "midtrans-client";
 import { createClient } from "@supabase/supabase-js";
 
-// Ganti dengan kredensial Anda. WAJIB GUNAKAN SERVICE ROLE KEY.
-const supabaseUrl = "https://bjrdyjjsmfzhpcggdfwc.supabase.co";
-const supabaseKey =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcmR5ampzbWZ6aHBjZ2dkZndjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjQxNzg4NSwiZXhwIjoyMDY3OTkzODg1fQ.QcjcHpWQVGkoe8NL8lynnD2tQns62oDvL0K7uGTkNpI"; // GANTI DENGAN SERVICE ROLE KEY ANDA
-const supabase = createClient(supabaseUrl, supabaseKey);
+import 'dotenv/config';
 
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+const midtransServerKey = process.env.MIDTRANS_SERVER_KEY;
+
+// Cek apakah semua variabel berhasil dimuat
+if (!supabaseUrl || !supabaseKey || !midtransServerKey) {
+  console.error("Kesalahan: Variabel lingkungan tidak ditemukan. Pastikan file .env di folder backend sudah ada dan benar.");
+  process.exit(1); // Hentikan server jika ada konfigurasi yang hilang
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 const snap = new midtransClient.Snap({
   isProduction: false,
-  serverKey: "SB-Mid-server-tDBl_6fEZ0aySZAWaDleC8kv",
+  serverKey: midtransServerKey, // p: Menggunakan variabel dari .env
 });
-// HANYA SATU ENDPOINT UNTUK MEMBUAT ORDER BARU & TOKEN
+
+// Endpoint untuk membuat order BARU & TOKEN
 app.post("/api/create-order", async (req, res) => {
   try {
     const { campaignId, userId, amount, paymentMethod } = req.body;
@@ -42,7 +51,7 @@ app.post("/api/create-order", async (req, res) => {
   }
 });
 
-// Endpoint untuk membuat TOKEN untuk ORDER PENDING (dari halaman Histori -> Payment)
+// Endpoint untuk membuat TOKEN untuk ORDER PENDING
 app.post("/api/create-token", async (req, res) => {
   try {
     const { orderId, grossAmount } = req.body;
@@ -56,7 +65,7 @@ app.post("/api/create-token", async (req, res) => {
 });
 
 
-// Endpoint Webhook (Dengan Perbaikan)
+// Endpoint Webhook
 app.post("/midtrans-notification", async (req, res) => {
   try {
     const statusResponse = await snap.transaction.notification(req.body);
@@ -64,13 +73,10 @@ app.post("/midtrans-notification", async (req, res) => {
     const transaction_status = statusResponse.transaction_status;
     const fraud_status = statusResponse.fraud_status;
 
-    // p: Ambil ID order ASLI dengan memotong timestamp jika ada.
-    // Format UUID (8-4-4-4-12) memiliki 5 bagian. Kita ambil 5 bagian pertama.
     const original_order_id = order_id_from_midtrans.split('-').slice(0, 5).join('-');
     console.log(`🔔 Notifikasi untuk Midtrans ID ${order_id_from_midtrans}, Order Asli ID: ${original_order_id}`);
 
     if (transaction_status == 'settlement' || (transaction_status == 'capture' && fraud_status == 'accept')) {
-      // p: Gunakan ID ASLI untuk mencari, mengupdate, dan mengurangi kursi.
       const { data: orderData, error: orderError } = await supabase.from('orders').select('campaign_id, status').eq('id', original_order_id).single();
       if (orderError) throw new Error(`Order ${original_order_id} tidak ditemukan.`);
       if (orderData.status === 'success') {
@@ -87,7 +93,6 @@ app.post("/midtrans-notification", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 const PORT = 5000;
 app.listen(PORT, () => console.log(`🚀 Server siap di port ${PORT}`));

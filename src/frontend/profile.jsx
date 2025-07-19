@@ -1,31 +1,15 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../backend/auth";
 import { supabase } from "../backend/supabase";
+import FullScreenLoader from "../frontend/components/loader"; // Gunakan loader Anda
 
 const Profile = () => {
     const navigate = useNavigate();
-    const { user, loading, setUser } = useAuth();
-    const [userData, setUserData] = useState(null);
-
-    useEffect(() => {
-        const fetchUserData = async () => {
-            if (user?.id) {
-                const { data, error } = await supabase.from("users").select("name, role").eq("user_id", user.id).single();
-
-                if (error) {
-                    console.error("Gagal ambil data user:", error.message);
-                } else {
-                    setUserData(data);
-                }
-            }
-        };
-
-        fetchUserData();
-    }, [user]);
+    const { user, userData, loading, setUser } = useAuth(); // Ambil userData dari context
 
     const handleLogout = async () => {
-        const confirmLogout = window.confirm("Yakin ingin logout?");
+        const confirmLogout = window.confirm("Apakah Anda yakin ingin logout?");
         if (!confirmLogout) return;
 
         try {
@@ -38,39 +22,54 @@ const Profile = () => {
     };
 
     if (loading) {
-        return <div className="text-center mt-10 text-gray-600">Memuat data...</div>;
+        return <FullScreenLoader message="Memuat profil..." />;
     }
 
     if (!user) {
-        return <div className="text-center mt-10 text-red-500">Kamu belum login.</div>;
+        // Arahkan ke home jika tidak ada user, ini lebih baik daripada menampilkan pesan error
+        useEffect(() => {
+            navigate("/home");
+        }, [navigate]);
+        return null;
     }
 
     return (
-        <div className="min-h-screen bg-gray-900 flex justify-center items-center px-4 sm:px-6 lg:px-8">
-            <div className="w-full max-w-screen-sm bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-10 text-white space-y-6">
-                <h1 className="text-2xl sm:text-3xl font-bold text-blue-400 text-center">Profil Saya</h1>
+        <div className="min-h-screen bg-gray-900 flex justify-center items-center px-4 sm:px-6 lg:px-8 py-10">
+            <div className="w-full max-w-lg bg-gray-800 rounded-2xl shadow-2xl p-6 sm:p-10 text-white space-y-8">
+                {/* Header */}
+                <div className="text-center">
+                    <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">
+                        Profil Saya
+                    </h1>
+                    <span className={`mt-2 inline-block px-3 py-1 text-xs font-semibold rounded-full ${userData?.role === 'partner' ? 'bg-green-500/20 text-green-300' : 'bg-blue-500/20 text-blue-300'}`}>
+                        {userData?.role === 'partner' ? 'Partner' : 'User'}
+                    </span>
+                </div>
 
-                <div className="space-y-4 text-sm sm:text-base">
-                    <div>
-                        <p className="text-gray-400 text-xl"> Nama</p>
-                        <p className="font-medium text-white text-xl">{userData?.name || "Tidak tersedia"}</p>
+                {/* Detail Informasi */}
+                <div className="space-y-4 border-t border-b border-gray-700 py-6">
+                    <div className="flex justify-between items-center">
+                        <p className="text-gray-400">Nama</p>
+                        <p className="font-medium text-white">{userData?.name || "Tidak tersedia"}</p>
                     </div>
-                    <div>
-                        <p className="text-gray-400 text-xl"> Email</p>
-                        <p className="font-medium text-white text-xl">{user.email}</p>
+                    <div className="flex justify-between items-center">
+                        <p className="text-gray-400">Email</p>
+                        <p className="font-medium text-white">{user.email}</p>
                     </div>
-                    <div>
-                        <p className="text-gray-400 text-xl"> ID Pengguna</p>
-                        <p className="text-gray-300 break-all text-xl">{user.id}</p>
-                    </div>
-                    <div>
-                        <p className="text-gray-400 text-xl"> Waktu Dibuat</p>
-                        <p className="text-gray-300 text-xl">{new Date(user.created_at).toLocaleString()}</p>
+                    <div className="flex justify-between items-center">
+                        <p className="text-gray-400">Bergabung Sejak</p>
+                        <p className="text-gray-300">{new Date(user.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                     </div>
                 </div>
 
-                <div className="pt-4">
-                    <button onClick={handleLogout} className="w-full bg-gray-600 hover:bg-red-700 transition text-white font-semibold py-2 rounded-lg shadow">
+                {/* Tombol Aksi */}
+                <div className="space-y-4">
+                    {userData?.role === 'partner' && (
+                        <Link to="/homepartner" className="block w-full text-center bg-blue-600 hover:bg-blue-700 transition text-white font-semibold py-3 rounded-lg shadow-lg">
+                            Kembali ke Dashboard
+                        </Link>
+                    )}
+                    <button onClick={handleLogout} className="w-full bg-red-600 hover:bg-red-700 transition text-white font-semibold py-3 rounded-lg shadow-lg">
                         Logout
                     </button>
                 </div>

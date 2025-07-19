@@ -1,5 +1,5 @@
 const HistoryCampaignLoad = () => (
-    // p : Hapus 'animate-pulse' dan tambahkan 'shimmer-effect'
+    
     <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl overflow-hidden shadow-xl border border-gray-700/50 h-full flex flex-col shimmer-effect">
         {/* p : Setiap elemen placeholder diberi warna dasar */}
         <div className="bg-gray-700 h-48"></div>
